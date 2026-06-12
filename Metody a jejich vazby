@@ -1,0 +1,29 @@
+## Struktura aplikace (Metody a jejich vazby)
+
+Program je postavený na propojení hlavního herního cyklu s pomocnými metodami, které se starají o UI, validaci vstupů a matematiku trhu.
+
+### 1. Inicializace a Logovací brána
+Při spuštění programu (`Main`) se nejprve zavolá metoda `NaplneniEventu()`, která vygeneruje balíček karet s makroekonomickými událostmi a zamíchá je. Poté se spustí logovací smyčka:
+- Pokud uživatel zvolí registraci (Sign in), program volá metodu `Jmeno()` pro zadání čistého textu a následně `Potvrzeni(jmeno)`, která přes klávesy `Enter`/`Esc` ověří správnost. Následně se přes `.Add(...)` vytvoří prvotní trh a zavolá se metoda `Ulozeni(hrac)`.
+- Pokud uživatel zvolí přihlášení (Log in), program v cyklu kontroluje existenci souboru. Když existuje, zavolá se metoda `Nahrani(cesta)`, která vytáhne data z JSONu, a program v dalším vnitřním cyklu porovnává zadaný řetězec s `prozatimUcet.Heslo`.
+
+### 2. Hlavní herní smyčka (Kolo hry)
+Jakmile je objekt `hrac` úspěšně naplněn daty, rozběhne se cyklus na 30 kol. Každé kolo má pevný řetězec vazeb mezi metodami:
+
+1. `VyberAktivaObchodu(...)` 
+   Vykreslí tabulku instrumentů a reaguje na šipky (`LeftArrow` / `RightArrow`). Metoda si vnitřně sahá do objektu hráče a volá `hrac.VypisCen()`, aby pod menu neustále svítily aktuální kurzy. Vrací zvolený typ (např. "Akcie").
+
+2. `VyberKonkretni(typAktiva, hrac)`
+   Přijme vybraný typ a vyzve hráče k zadání konkrétního Tickeru (např. "AAPL"). Metoda v `foreach` cyklu projde příslušný list v objektu `hrac` a ověří, zda aktivum existuje. Pokud ano, propíše jeho historii cen do globálního `listCen` (příprava pro graf).
+
+3. `OvereniNakup(hrac)` / `OvereniCisloProdej(...)`
+   Před samotným obchodem program skočí do těchto validačních metod. Ty hlídají extrémy: uživatel nesmí zadat text místo čísla (`double.TryParse`), nesmí jít do mínusu a nesmí chtít investovat víc, než kolik má na kontě (`hrac.Penize`) nebo kolik kusů reálně vlastní. Vrací finální ověřenou částku v dolarech.
+
+4. `Nakup(...)` / `NakupAkcie(...)` / `NakupKomodity(...)` / `Prodej(...)`
+   Jakmile máme ověřený peněžní obnos, program zavolá příslušnou metodu obchodu. Ta provede finální matematický zápis: odečte/přičte peníze na účtu hráče a přepočítá `PocetVlastnenych` kusů daného aktiva.
+
+5. `VyberEventu(...)` -> `ZmenaCen(hrac, aktualniUdalost)`
+   Na konci kola hra vylosuje z listu globální zprávu. Metoda `ZmenaCen` pak projde komplet celé portfolio hráče (`ListKrypta`, `ListAkcie`, `ListKomodity`) a pomocí `Random.Shared.NextDouble()` zkombinuje základní volatilitu aktiva s procentuálním dopadem události (`udalost.Rozsah`). Hned poté každé aktivum zavolá svou interní metodu `.ZapisCen()`, která novou cenu přihodí do historie.
+
+6. `Ulozeni(hrac)`
+   Úplně posledním krokem v kole je automatický autosave. Celý aktualizovaný objekt `hrac` se vezme a přepíše se do souboru na disku, čímž se kolo bezpečně uzavře.
