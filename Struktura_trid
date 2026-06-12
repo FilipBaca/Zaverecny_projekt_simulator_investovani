@@ -1,0 +1,9 @@
+Třída: Program ]  <--- (Řídí hlavní menu, kola hry a eventy, výpisy)
+               |
+               v
+         [ Třída: Ucet ]   <--- (Ukládá se do JSON: Jméno, Heslo, Peníze, počet uhraných kol)
+               |
+      +--------+--------+
+      |        |        |
+      v        v        v
+  [Akcie]  [Komodity] [KryptoMeny]  <--- (Listy aktiv, které hráč vlastní)
